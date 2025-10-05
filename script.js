@@ -16,17 +16,17 @@ let camera;
 let smoothedFacePoints = {};
 
 // ================== GOOGLE DRIVE CONFIG ==================
-const API_KEY = "AIzaSyBhi05HMVGg90dPP91zG1RZtNxm-d6hnQw"; 
+const API_KEY = "AIzaSyCOkk8w6DyEp5lwdm5DjECSo-c2Xitw9vI";
 
 // Map jewelry type → Google Drive Folder ID
 const driveFolders = {
-  diamond_earrings: "1N0jndAEIThUuuNAJpvuRMGsisIaXCgMZ",
-  diamond_necklaces: "1JGV8T03YdzjfW0Dyt9aMPybH8V9-gEhw",
-  gold_earrings: "1GMZpcv4A1Gy2xiaIC1XPG_IOAt9NrDpi",
-  gold_necklaces: "1QIvX-PrSVrK9gz-TEksqiKlXPGv2hsS5",
+  gold_earrings: "16q2qkfEmeyMa45edfuRGwhJskQEbiwFS",
+  gold_necklaces: "1yiCBSMk4HpxxZcPf2AQeQeAKMcNNQNxt",
+  diamond_earrings: "177PssOxA552FjZS6OjtMpz-tRZzJuL26",
+  diamond_necklaces: "1ffu4kbZMpWhw4bOLnB07z-HM8E5Lz7qz",
 };
 
-// Fetch image links from a Drive folder
+// Fetch image links from a Drive folder (HQ version)
 async function fetchDriveImages(folderId) {
   const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)`;
   const res = await fetch(url);
@@ -37,8 +37,9 @@ async function fetchDriveImages(folderId) {
   return data.files
     .filter(f => f.mimeType.includes("image/"))
     .map(f => {
-      const link = `https://drive.google.com/thumbnail?id=${f.id}&sz=w1000`;
-      console.log("Image loaded:", link);
+      // use high-quality direct view link instead of thumbnail
+      const link = `https://drive.google.com/uc?export=view&id=${f.id}`;
+      console.log("Loaded jewelry image:", link);
       return { id: f.id, name: f.name, src: link };
     });
 }
@@ -112,7 +113,12 @@ async function insertJewelryOptions(type, containerId) {
 const faceMesh = new FaceMesh({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
 });
-faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: true,
+  minDetectionConfidence: 0.6,
+  minTrackingConfidence: 0.6
+});
 
 faceMesh.onResults((results) => {
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -164,7 +170,7 @@ function smoothPoint(prev, current, factor = 0.4) {
   };
 }
 
-// Draw jewelry
+// =============== DRAW JEWELRY ==================
 function drawJewelry(faceLandmarks, ctx) {
   const earringScale = 0.078;
   const necklaceScale = 0.252;
@@ -182,14 +188,25 @@ function drawJewelry(faceLandmarks, ctx) {
     smoothedFacePoints.rightEar = smoothPoint(smoothedFacePoints.rightEar, rightEarPos);
     smoothedFacePoints.neck = smoothPoint(smoothedFacePoints.neck, neckPos);
 
+    // ----------------- Apply Enhancement Filters -----------------
+    ctx.globalCompositeOperation = "lighten";
+    ctx.filter = "brightness(1.15) saturate(1.3)";  // boost gold & diamond color
+
+    // Draw earrings
     if (earringImg) {
       const w = earringImg.width * earringScale, h = earringImg.height * earringScale;
       ctx.drawImage(earringImg, smoothedFacePoints.leftEar.x - w / 2, smoothedFacePoints.leftEar.y, w, h);
       ctx.drawImage(earringImg, smoothedFacePoints.rightEar.x - w / 2, smoothedFacePoints.rightEar.y, w, h);
     }
+
+    // Draw necklace
     if (necklaceImg) {
       const w = necklaceImg.width * necklaceScale, h = necklaceImg.height * necklaceScale;
       ctx.drawImage(necklaceImg, smoothedFacePoints.neck.x - w / 2, smoothedFacePoints.neck.y, w, h);
     }
+
+    // Reset blending and filter
+    ctx.filter = "none";
+    ctx.globalCompositeOperation = "source-over";
   }
 }
