@@ -37,7 +37,6 @@ async function fetchDriveImages(folderId) {
   return data.files
     .filter(f => f.mimeType.includes("image/"))
     .map(f => {
-      // use high-quality direct view link instead of thumbnail
       const link = `https://drive.google.com/uc?export=view&id=${f.id}`;
       console.log("Loaded jewelry image:", link);
       return { id: f.id, name: f.name, src: link };
@@ -180,17 +179,18 @@ function drawJewelry(faceLandmarks, ctx) {
     const rightEarLandmark = faceLandmarks[361];
     const neckLandmark = faceLandmarks[152];
 
-    let leftEarPos = { x: leftEarLandmark.x * canvasElement.width - 6, y: leftEarLandmark.y * canvasElement.height - 16 };
-    let rightEarPos = { x: rightEarLandmark.x * canvasElement.width + 6, y: rightEarLandmark.y * canvasElement.height - 16 };
+    // moved earrings slightly upward (-26 instead of -16)
+    let leftEarPos = { x: leftEarLandmark.x * canvasElement.width - 6, y: leftEarLandmark.y * canvasElement.height - 26 };
+    let rightEarPos = { x: rightEarLandmark.x * canvasElement.width + 6, y: rightEarLandmark.y * canvasElement.height - 26 };
     let neckPos = { x: neckLandmark.x * canvasElement.width - 8, y: neckLandmark.y * canvasElement.height + 10 };
 
     smoothedFacePoints.leftEar = smoothPoint(smoothedFacePoints.leftEar, leftEarPos);
     smoothedFacePoints.rightEar = smoothPoint(smoothedFacePoints.rightEar, rightEarPos);
     smoothedFacePoints.neck = smoothPoint(smoothedFacePoints.neck, neckPos);
 
-    // ----------------- Apply Enhancement Filters -----------------
+    // ----------------- Enhancement Filters -----------------
     ctx.globalCompositeOperation = "lighten";
-    ctx.filter = "brightness(1.15) saturate(1.3)";  // boost gold & diamond color
+    ctx.filter = "brightness(1.15) saturate(1.3)";
 
     // Draw earrings
     if (earringImg) {
@@ -205,7 +205,6 @@ function drawJewelry(faceLandmarks, ctx) {
       ctx.drawImage(necklaceImg, smoothedFacePoints.neck.x - w / 2, smoothedFacePoints.neck.y, w, h);
     }
 
-    // Reset blending and filter
     ctx.filter = "none";
     ctx.globalCompositeOperation = "source-over";
   }
